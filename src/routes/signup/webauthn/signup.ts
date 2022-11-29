@@ -12,11 +12,12 @@ import { RequestHandler } from 'express';
 
 import { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/typescript-types';
 import { email, Joi, registrationOptions } from '@/validation';
-import { UserRegistrationOptions } from '@/types';
+import { UserRegistrationOptionsWithRedirect } from '@/types';
+import { deanonymizeUser, sendEmailIfNotVerified } from '@/utils';
 
 export type SignUpWebAuthnRequestBody = {
   email: string;
-  options: UserRegistrationOptions;
+  options: UserRegistrationOptionsWithRedirect;
 };
 export type SignUpWebAuthnResponseBody = PublicKeyCredentialRequestOptionsJSON;
 
@@ -35,7 +36,8 @@ export const signUpWebauthnHandler: RequestHandler<
   }
 
   // check if email already in use by some other user
-  if (await getUserByEmail(email)) {
+  const existingUser = await getUserByEmail(email);
+  if (existingUser && !existingUser.isAnonymous) {
     return sendError(res, 'email-already-in-use');
   }
 
@@ -47,32 +49,55 @@ export const signUpWebauthnHandler: RequestHandler<
     displayName = email,
   } = options;
 
-  const userId = uuidv4();
+  const userId = existingUser?.id || uuidv4();
+
   const registrationOptions = generateRegistrationOptions({
     rpID: getWebAuthnRelyingParty(),
     rpName: ENV.AUTH_WEBAUTHN_RP_NAME,
     userID: userId,
-    userName: displayName ?? email,
+    userName: displayName,
     attestationType: 'indirect',
   });
 
-  await insertUser({
-    id: userId,
-    isAnonymous: true,
-    newEmail: email,
-    email: null,
-    disabled: ENV.AUTH_DISABLE_NEW_USERS,
-    displayName,
-    avatarUrl: getGravatarUrl(email),
-    emailVerified: false,
-    locale,
-    defaultRole,
-    roles: {
-      // restructure user roles to be inserted in GraphQL mutation
-      data: allowedRoles.map((role: string) => ({ role })),
-    },
-    metadata,
-    currentChallenge: registrationOptions.challenge,
-  });
+  if (existingUser) {
+    // * Deanonymisation
+    const user = await deanonymizeUser(
+      userId,
+      {
+        newEmail: email,
+        email: null,
+        currentChallenge: registrationOptions.challenge,
+        // * We keep the user anonymous for now, until they complete the webauthn choreography
+        isAnonymous: true,
+      },
+      options
+    );
+    await sendEmailIfNotVerified('email-verify', {
+      user,
+      newEmail: email,
+      displayName: user.displayName || 'email',
+      redirectTo: options.redirectTo,
+    });
+  } else {
+    await insertUser({
+      id: userId,
+      isAnonymous: true,
+      newEmail: email,
+      email: null,
+      disabled: ENV.AUTH_DISABLE_NEW_USERS,
+      displayName,
+      avatarUrl: getGravatarUrl(email),
+      emailVerified: false,
+      locale,
+      defaultRole,
+      roles: {
+        // restructure user roles to be inserted in GraphQL mutation
+        data: allowedRoles.map((role: string) => ({ role })),
+      },
+      metadata,
+      currentChallenge: registrationOptions.challenge,
+    });
+  }
+
   return res.send(registrationOptions);
 };

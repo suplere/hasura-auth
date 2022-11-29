@@ -162,7 +162,7 @@ export const insertDbUser = async (
   verified = true,
   disabled = false
 ) => {
-  const ticket = `verifyEmail:${uuidv4()}`;
+  const ticket = `email-verify:${uuidv4()}`;
   const ticketExpiresAt = generateTicketExpiresAt(60 * 60 * 24 * 30); // 30 days
   const queryString = `INSERT INTO auth.users(display_name, email, password_hash, email_verified, disabled, locale, ticket, ticket_expires_at) 
     VALUES('${email}', '${email}', '${hashPassword(

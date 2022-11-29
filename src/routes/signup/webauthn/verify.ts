@@ -4,20 +4,14 @@ import {
   getSignInResponse,
   verifyWebAuthnRegistration,
   gqlSdk,
-  createVerifyEmailTicket,
-  createEmailRedirectionLink,
   getUserByEmail,
+  sendEmailIfNotVerified,
 } from '@/utils';
 import { RequestHandler } from 'express';
 
 import { RegistrationCredentialJSON } from '@simplewebauthn/typescript-types';
 import { Joi, redirectTo } from '@/validation';
-import {
-  EMAIL_TYPES,
-  SignInResponse,
-  UserRegistrationOptionsWithRedirect,
-} from '@/types';
-import { emailClient } from '@/email';
+import { SignInResponse, UserRegistrationOptionsWithRedirect } from '@/types';
 
 export type SignUpVerifyWebAuthnRequestBody = {
   credential: RegistrationCredentialJSON;
@@ -95,57 +89,12 @@ export const signInVerifyWebauthnHandler: RequestHandler<
     }
 
     if (ENV.AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED && !user.emailVerified) {
-      // TODO reuse this code in other places
-      // create ticket
-      const { ticket, ticketExpiresAt } = createVerifyEmailTicket();
-
-      await gqlSdk.updateUser({
-        id: user.id,
-        user: {
-          ticket,
-          ticketExpiresAt,
-        },
-      });
-      const template = 'email-verify';
-      const link = createEmailRedirectionLink(
-        EMAIL_TYPES.VERIFY,
-        ticket,
-        redirectTo
-      );
-      await emailClient.send({
-        template,
-        message: {
-          to: user.newEmail,
-          headers: {
-            'x-ticket': {
-              prepared: true,
-              value: ticket,
-            },
-            'x-redirect-to': {
-              prepared: true,
-              value: redirectTo,
-            },
-            'x-email-template': {
-              prepared: true,
-              value: template,
-            },
-            'x-link': {
-              prepared: true,
-              value: link,
-            },
-          },
-        },
-        locals: {
-          link,
-          displayName: user.displayName,
-          email: user.newEmail,
-          newEmail: user.newEmail,
-          ticket: ticket,
-          redirectTo: encodeURIComponent(redirectTo),
-          locale: user.locale ?? ENV.AUTH_LOCALE_DEFAULT,
-          serverUrl: ENV.AUTH_SERVER_URL,
-          clientUrl: ENV.AUTH_CLIENT_URL,
-        },
+      await sendEmailIfNotVerified('email-verify', {
+        user,
+        displayName: user.displayName || user.email,
+        newEmail: user.email,
+        redirectTo,
+        email: user.email,
       });
 
       return res.send({ session: null, mfa: null });

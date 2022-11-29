@@ -8,33 +8,42 @@ import { hashPassword } from '../password';
 import { emailClient } from '@/email';
 import { createEmailRedirectionLink } from '../redirect';
 import { getUserByEmail } from './getters';
-import { UserQuery } from '../__generated__/graphql-request';
+import { Users_Set_Input } from '../__generated__/graphql-request';
+import { gqlSdk } from '../gql-sdk';
 
-const sendEmailIfNotVerified = async ({
-  email,
-  newEmail,
-  user,
-  displayName,
-  ticket,
-  redirectTo,
-}: {
-  email: string;
-  newEmail: string;
-  user: NonNullable<UserQuery['user']>;
-  displayName: string;
-  ticket?: string | null;
-  redirectTo: string;
-}) => {
+export const sendEmailIfNotVerified = async (
+  template: string,
+  {
+    newEmail,
+    email = newEmail,
+    user,
+    displayName,
+    redirectTo,
+  }: {
+    email?: string;
+    newEmail: string;
+    user: Users_Set_Input;
+    displayName: string;
+
+    redirectTo: string;
+  }
+) => {
   if (
     !ENV.AUTH_DISABLE_NEW_USERS &&
     ENV.AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED &&
     !user.emailVerified
   ) {
-    if (!ticket) {
-      throw Error(`No ticket found for the user ${user.id}`);
-    }
+    const ticket = user.ticket || `${template}:${uuidv4()}`;
+    const ticketExpiresAt = generateTicketExpiresAt(60 * 60);
 
-    const template = 'email-verify';
+    await gqlSdk.updateUser({
+      id: user.id,
+      user: {
+        ticket,
+        ticketExpiresAt,
+      },
+    });
+
     const link = createEmailRedirectionLink(
       EMAIL_TYPES.VERIFY,
       ticket,
@@ -72,7 +81,7 @@ const sendEmailIfNotVerified = async ({
         newEmail: newEmail,
         ticket,
         redirectTo: encodeURIComponent(redirectTo),
-        locale: user.locale,
+        locale: user?.locale || ENV.AUTH_LOCALE_DEFAULT,
         serverUrl: ENV.AUTH_SERVER_URL,
         clientUrl: ENV.AUTH_CLIENT_URL,
       },
@@ -97,12 +106,11 @@ export const createUserAndSendVerificationEmail = async (
   const existingUser = await getUserByEmail(email);
 
   if (existingUser) {
-    await sendEmailIfNotVerified({
+    await sendEmailIfNotVerified('email-verify', {
       email,
       newEmail: email,
       user: existingUser,
       displayName,
-      ticket: existingUser.ticket,
       redirectTo,
     });
 
@@ -112,11 +120,6 @@ export const createUserAndSendVerificationEmail = async (
   // hash password
   const passwordHash = password && (await hashPassword(password));
 
-  // create ticket
-  // TODO use createVerifyEmailTicket()
-  const ticket = `verifyEmail:${uuidv4()}`;
-  const ticketExpiresAt = generateTicketExpiresAt(60 * 60 * 24 * 30); // 30 days
-
   // insert user
   const user = await insertUser({
     disabled: ENV.AUTH_DISABLE_NEW_USERS,
@@ -124,8 +127,6 @@ export const createUserAndSendVerificationEmail = async (
     avatarUrl: getGravatarUrl(email),
     email,
     passwordHash,
-    ticket,
-    ticketExpiresAt,
     emailVerified: false,
     locale,
     defaultRole,
@@ -136,12 +137,11 @@ export const createUserAndSendVerificationEmail = async (
     metadata,
   });
 
-  await sendEmailIfNotVerified({
+  await sendEmailIfNotVerified('email-verify', {
     email,
     newEmail: user.newEmail,
     user,
     displayName,
-    ticket,
     redirectTo,
   });
 

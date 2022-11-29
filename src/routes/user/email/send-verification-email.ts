@@ -1,18 +1,9 @@
 import { RequestHandler } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { ReasonPhrases } from 'http-status-codes';
 
-import {
-  gqlSdk,
-  generateTicketExpiresAt,
-  getUserByEmail,
-  ENV,
-  createEmailRedirectionLink,
-} from '@/utils';
-import { emailClient } from '@/email';
+import { getUserByEmail, sendEmailIfNotVerified } from '@/utils';
 import { sendError } from '@/errors';
 import { Joi, email, redirectTo } from '@/validation';
-import { EMAIL_TYPES } from '@/types';
 
 export const userEmailSendVerificationEmailSchema = Joi.object({
   email: email.required(),
@@ -47,59 +38,12 @@ export const userEmailSendVerificationEmailHandler: RequestHandler<
   }
 
   // TODO: possibly check when last email was sent to minimize abuse
-  // TODO use createVerifyEmailTicket()
-  const ticket = `verifyEmail:${uuidv4()}`;
-  const ticketExpiresAt = generateTicketExpiresAt(60 * 60 * 24 * 30); // 30 days
-
-  // set newEmail for user
-  await gqlSdk.updateUser({
-    id: user.id,
-    user: {
-      ticket,
-      ticketExpiresAt,
-    },
-  });
-
-  const template = 'email-verify';
-  const link = createEmailRedirectionLink(
-    EMAIL_TYPES.VERIFY,
-    ticket,
-    redirectTo
-  );
-  await emailClient.send({
-    template,
-    message: {
-      to: email,
-      headers: {
-        'x-ticket': {
-          prepared: true,
-          value: ticket,
-        },
-        'x-redirect-to': {
-          prepared: true,
-          value: redirectTo,
-        },
-        'x-email-template': {
-          prepared: true,
-          value: template,
-        },
-        'x-link': {
-          prepared: true,
-          value: link,
-        },
-      },
-    },
-    locals: {
-      link,
-      displayName: user.displayName,
-      email: user.email,
-      newEmail: user.newEmail,
-      ticket,
-      redirectTo: encodeURIComponent(redirectTo),
-      locale: user.locale ?? ENV.AUTH_LOCALE_DEFAULT,
-      serverUrl: ENV.AUTH_SERVER_URL,
-      clientUrl: ENV.AUTH_CLIENT_URL,
-    },
+  await sendEmailIfNotVerified('email-verify', {
+    user,
+    redirectTo,
+    displayName: user.displayName || email,
+    newEmail: email,
+    email,
   });
 
   return res.json(ReasonPhrases.OK);

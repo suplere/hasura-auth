@@ -49,6 +49,6 @@ describe('custom external email templates', () => {
     // expect(rfc2047.decode(message.Content.Headers.Subject[0])).not.toBe(
     //   'Verify your email'
     // );
-    expect(ticket.startsWith('verifyEmail:')).toBeTruthy();
+    expect(ticket.startsWith('email-verify:')).toBeTruthy();
   });
 });

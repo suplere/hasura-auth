@@ -4,6 +4,7 @@ import fs from 'fs';
 import urlJoin from 'url-join';
 import { logger } from './logger';
 import { ENV } from './utils';
+import { TemplateType } from './types';
 
 type TemplateEngineProps = {
   content: string;
@@ -119,7 +120,7 @@ export type EmailLocals = CommonLocals & {
 };
 
 export const renderTemplate = async (
-  view: string,
+  view: `${TemplateType}/${'text' | 'html'}`,
   locals: EmailLocals | SmsLocals
 ) => {
   try {

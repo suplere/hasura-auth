@@ -2,7 +2,7 @@ import { RequestHandler } from 'express';
 import twilio from 'twilio';
 import { ReasonPhrases } from 'http-status-codes';
 
-import { TemplateType, UserRegistrationOptions } from '@/types';
+import { TRANSACTION_TYPES, UserRegistrationOptions } from '@/types';
 import {
   gqlSdk,
   getNewOneTimePasswordData,
@@ -98,12 +98,14 @@ export const signInPasswordlessSmsHandler: RequestHandler<
           to: phoneNumber,
         });
     } else {
-      const template: TemplateType = 'signin-passwordless-sms';
-      const message = await renderTemplate(`${template}/text`, {
-        locale: user.locale ?? ENV.AUTH_LOCALE_DEFAULT,
-        displayName: user.displayName,
-        code: otp,
-      });
+      const message = await renderTemplate(
+        `${TRANSACTION_TYPES.signinPassordlessSms}/text`,
+        {
+          locale: user.locale ?? ENV.AUTH_LOCALE_DEFAULT,
+          displayName: user.displayName,
+          code: otp,
+        }
+      );
 
       await twilioClient.messages.create({
         body: message ?? `Your code is ${otp}`,

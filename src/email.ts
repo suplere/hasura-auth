@@ -28,7 +28,10 @@ export const emailClient = new Email<EmailLocals>({
   transport,
   message: { from: ENV.AUTH_SMTP_SENDER },
   send: true,
-  render: renderTemplate,
+  render: renderTemplate as (
+    view: string,
+    locals?: EmailLocals
+  ) => Promise<string>,
 });
 
 export const sendEmail = async (

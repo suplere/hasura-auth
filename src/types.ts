@@ -107,6 +107,11 @@ export type JwtSecret = {
   header?: string;
 };
 
+/**
+ * Possible types of email or SMS transactions.
+ * The key is the type name, used to identify the transaction in tickets.
+ * The value is the template name.
+ */
 export const TRANSACTION_TYPES = {
   emailVerify: 'email-verify',
   emailConfirmChange: 'email-confirm-change',

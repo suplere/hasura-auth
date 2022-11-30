@@ -38,13 +38,16 @@ export const userEmailSendVerificationEmailHandler: RequestHandler<
   }
 
   // TODO: possibly check when last email was sent to minimize abuse
-  await sendEmailIfNotVerified('email-verify', {
-    user,
-    redirectTo,
-    displayName: user.displayName || email,
-    newEmail: email,
-    email,
-  });
+  await sendEmailIfNotVerified(
+    {
+      user,
+      redirectTo,
+      displayName: user.displayName || email,
+      newEmail: email,
+      email,
+    },
+    true
+  );
 
   return res.json(ReasonPhrases.OK);
 };

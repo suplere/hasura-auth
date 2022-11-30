@@ -6,6 +6,7 @@ import { sendError } from '@/errors';
 import { UserRegistrationOptionsWithRedirect } from '@/types';
 import { deanonymizeUser } from './deanonymize';
 import { sendEmailIfNotVerified } from './email-verification';
+import { ReasonPhrases } from 'http-status-codes';
 
 export type BodyTypePasswordlessEmail = {
   signInMethod: 'passwordless';
@@ -36,10 +37,12 @@ export const handleDeanonymizeUserPasswordlessEmail = async (
 
   const updatedUser = await deanonymizeUser(userId, { email }, options);
 
-  await sendEmailIfNotVerified('verify-email', {
+  await sendEmailIfNotVerified({
     newEmail: email,
     user: updatedUser,
     displayName: updatedUser.displayName || email,
     redirectTo: options.redirectTo,
   });
+
+  return res.json(ReasonPhrases.OK);
 };

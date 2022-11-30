@@ -1,18 +1,15 @@
 import { RequestHandler } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { ReasonPhrases } from 'http-status-codes';
 
-import { emailClient } from '@/email';
+import { sendEmail } from '@/email';
 import {
   gqlSdk,
   getUserByEmail,
   generateTicketExpiresAt,
-  ENV,
-  createEmailRedirectionLink,
+  generateTicket,
 } from '@/utils';
 import { sendError } from '@/errors';
 import { Joi, email, redirectTo } from '@/validation';
-import { EMAIL_TYPES } from '@/types';
 
 export const userPasswordResetSchema = Joi.object({
   email: email.required(),
@@ -41,7 +38,7 @@ export const userPasswordResetHandler: RequestHandler<
     return sendError(res, 'user-not-found');
   }
 
-  const ticket = `${EMAIL_TYPES.PASSWORD_RESET}:${uuidv4()}`;
+  const ticket = generateTicket('passwordReset');
   const ticketExpiresAt = generateTicketExpiresAt(60 * 60); // 1 hour
 
   await gqlSdk.updateUser({
@@ -52,46 +49,11 @@ export const userPasswordResetHandler: RequestHandler<
     },
   });
 
-  const template = 'password-reset';
-  const link = createEmailRedirectionLink(
-    EMAIL_TYPES.PASSWORD_RESET,
+  await sendEmail('passwordReset', {
+    email,
+    user,
+    redirectTo,
     ticket,
-    redirectTo
-  );
-  await emailClient.send({
-    template,
-    locals: {
-      link,
-      displayName: user.displayName,
-      email,
-      newEmail: user.newEmail,
-      ticket,
-      redirectTo: encodeURIComponent(redirectTo),
-      locale: user.locale ?? ENV.AUTH_LOCALE_DEFAULT,
-      serverUrl: ENV.AUTH_SERVER_URL,
-      clientUrl: ENV.AUTH_CLIENT_URL,
-    },
-    message: {
-      to: email,
-      headers: {
-        'x-ticket': {
-          prepared: true,
-          value: ticket,
-        },
-        'x-redirect-to': {
-          prepared: true,
-          value: redirectTo,
-        },
-        'x-email-template': {
-          prepared: true,
-          value: template,
-        },
-        'x-link': {
-          prepared: true,
-          value: link,
-        },
-      },
-    },
   });
 
   return res.json(ReasonPhrases.OK);

@@ -1,5 +1,4 @@
 import { RequestHandler } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { ReasonPhrases } from 'http-status-codes';
 
 import {
@@ -9,10 +8,10 @@ import {
   getGravatarUrl,
   generateTicketExpiresAt,
   ENV,
-  createEmailRedirectionLink,
+  generateTicket,
 } from '@/utils';
-import { emailClient } from '@/email';
-import { EMAIL_TYPES, UserRegistrationOptionsWithRedirect } from '@/types';
+import { sendEmail } from '@/email';
+import { UserRegistrationOptionsWithRedirect } from '@/types';
 import { sendError } from '@/errors';
 import { Joi, email, registrationOptions } from '@/validation';
 
@@ -73,7 +72,7 @@ export const signInPasswordlessEmailHandler: RequestHandler<
   }
 
   // create ticket
-  const ticket = `passwordlessEmail:${uuidv4()}`;
+  const ticket = generateTicket('signinPasswordless');
   const ticketExpiresAt = generateTicketExpiresAt(60 * 60);
 
   await gqlSdk.updateUser({
@@ -84,46 +83,11 @@ export const signInPasswordlessEmailHandler: RequestHandler<
     },
   });
 
-  const template = 'signin-passwordless';
-  const link = createEmailRedirectionLink(
-    EMAIL_TYPES.SIGNIN_PASSWORDLESS,
+  await sendEmail('signinPasswordless', {
+    email,
     ticket,
-    redirectTo
-  );
-  await emailClient.send({
-    template,
-    message: {
-      to: email,
-      headers: {
-        'x-ticket': {
-          prepared: true,
-          value: ticket,
-        },
-        'x-redirect-to': {
-          prepared: true,
-          value: redirectTo,
-        },
-        'x-email-template': {
-          prepared: true,
-          value: template,
-        },
-        'x-link': {
-          prepared: true,
-          value: link,
-        },
-      },
-    },
-    locals: {
-      link,
-      displayName: user.displayName,
-      email,
-      newEmail: user.newEmail,
-      ticket,
-      redirectTo: encodeURIComponent(redirectTo),
-      locale: user.locale ?? ENV.AUTH_LOCALE_DEFAULT,
-      serverUrl: ENV.AUTH_SERVER_URL,
-      clientUrl: ENV.AUTH_CLIENT_URL,
-    },
+    redirectTo,
+    user,
   });
 
   return res.json(ReasonPhrases.OK);

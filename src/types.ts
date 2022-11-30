@@ -107,10 +107,14 @@ export type JwtSecret = {
   header?: string;
 };
 
-export const EMAIL_TYPES = {
-  VERIFY: 'emailVerify',
-  CONFIRM_CHANGE: 'emailConfirmChange',
-  SIGNIN_PASSWORDLESS: 'signinPasswordless',
-  PASSWORD_RESET: 'passwordReset',
+export const TRANSACTION_TYPES = {
+  emailVerify: 'email-verify',
+  emailConfirmChange: 'email-confirm-change',
+  signinPasswordless: 'signin-passwordless',
+  signinPassordlessSms: 'signin-passwordless-sms',
+  passwordReset: 'password-reset',
 } as const;
-export type EmailType = typeof EMAIL_TYPES[keyof typeof EMAIL_TYPES];
+
+export type TransactionType = keyof typeof TRANSACTION_TYPES;
+export type TemplateType =
+  typeof TRANSACTION_TYPES[keyof typeof TRANSACTION_TYPES];

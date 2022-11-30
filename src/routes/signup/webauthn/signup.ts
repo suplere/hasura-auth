@@ -72,7 +72,7 @@ export const signUpWebauthnHandler: RequestHandler<
       },
       options
     );
-    await sendEmailIfNotVerified('email-verify', {
+    await sendEmailIfNotVerified({
       user,
       newEmail: email,
       displayName: user.displayName || 'email',

@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { gqlSdk } from '@/utils';
 import { SignInResponse, Session } from '../types';
 import { UserFieldsFragment } from './__generated__/graphql-request';
-import { generateTicketExpiresAt } from './ticket';
+import { generateTicket, generateTicketExpiresAt } from './ticket';
 import { ENV } from './env';
 import { getUser } from './user';
 import { createHasuraAccessToken } from './jwt';
@@ -95,7 +95,7 @@ export const getSignInResponse = async ({
 
   if (checkMFA && user?.activeMfaType === 'totp') {
     // generate new ticket
-    const ticket = `mfaTotp:${uuidv4()}`;
+    const ticket = generateTicket('mfaTotp');
 
     // set ticket
     await gqlSdk.updateUser({

@@ -125,7 +125,7 @@ describe('email-password', () => {
     const [message] = await mailHogSearch(email);
     expect(message).toBeTruthy();
     const ticket = message.Content.Headers['X-Ticket'][0];
-    expect(ticket.startsWith('email-verify:')).toBeTruthy();
+    expect(ticket.startsWith('emailVerify:')).toBeTruthy();
   });
 
   it('default role must be part of allowed roles', async () => {

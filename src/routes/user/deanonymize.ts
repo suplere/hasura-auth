@@ -1,5 +1,4 @@
 import { RequestHandler } from 'express';
-import { ReasonPhrases } from 'http-status-codes';
 
 import {
   BodyTypeEmailPassword,
@@ -37,13 +36,11 @@ export const userDeanonymizeHandler: RequestHandler<
   const { userId } = req.auth as RequestAuth;
 
   if (body.signInMethod === 'email-password') {
-    await handleDeanonymizeUserEmailPassword(body, userId, res);
-    return;
+    return await handleDeanonymizeUserEmailPassword(body, userId, res);
   }
 
   if (body.signInMethod === 'passwordless' && body.connection === 'email') {
-    await handleDeanonymizeUserPasswordlessEmail(body, userId, res);
-    return res.json(ReasonPhrases.OK);
+    return await handleDeanonymizeUserPasswordlessEmail(body, userId, res);
   }
 
   // if (body.signInMethod === 'passwordless' && body.connection === 'sms') {

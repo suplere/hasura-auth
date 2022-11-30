@@ -111,7 +111,7 @@ export type SmsLocals = CommonLocals & {
 export type EmailLocals = CommonLocals & {
   link: string;
   email: string;
-  newEmail: string;
+  newEmail?: string;
   ticket: string;
   redirectTo: string;
   serverUrl: string;

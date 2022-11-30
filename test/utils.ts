@@ -1,12 +1,11 @@
 import fetch, { Response } from 'node-fetch';
 import { Response as SuperTestResponse } from 'supertest';
 import { ENV } from '../src/utils/env';
-import { verifyJwt } from '@/utils';
+import { generateTicket, verifyJwt } from '@/utils';
 import { request } from './server';
 import { StatusCodes } from 'http-status-codes';
 import { generateTicketExpiresAt, hashPassword } from '@/utils';
 import { ClientBase } from 'pg';
-import { v4 as uuidv4 } from 'uuid';
 
 interface MailhogEmailAddress {
   Relays: string | null;
@@ -162,7 +161,7 @@ export const insertDbUser = async (
   verified = true,
   disabled = false
 ) => {
-  const ticket = `email-verify:${uuidv4()}`;
+  const ticket = generateTicket('emailVerify');
   const ticketExpiresAt = generateTicketExpiresAt(60 * 60 * 24 * 30); // 30 days
   const queryString = `INSERT INTO auth.users(display_name, email, password_hash, email_verified, disabled, locale, ticket, ticket_expires_at) 
     VALUES('${email}', '${email}', '${hashPassword(

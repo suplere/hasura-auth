@@ -89,7 +89,7 @@ export const signInVerifyWebauthnHandler: RequestHandler<
     }
 
     if (ENV.AUTH_EMAIL_SIGNIN_EMAIL_VERIFIED_REQUIRED && !user.emailVerified) {
-      await sendEmailIfNotVerified('email-verify', {
+      await sendEmailIfNotVerified({
         user,
         displayName: user.displayName || user.email,
         newEmail: user.email,

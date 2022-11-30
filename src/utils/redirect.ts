@@ -1,4 +1,4 @@
-import { EmailType } from '@/types';
+import { TransactionType } from '@/types';
 import { ENV } from './env';
 
 export const generateRedirectUrl = (
@@ -19,7 +19,7 @@ export const generateRedirectUrl = (
 };
 
 export const createEmailRedirectionLink = (
-  type: EmailType,
+  type: TransactionType,
   ticket: string,
   redirectTo: string
 ) =>

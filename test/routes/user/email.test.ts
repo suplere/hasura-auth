@@ -5,7 +5,7 @@ import * as faker from 'faker';
 
 import { ENV } from '../../../src/utils/env';
 import { request } from '../../server';
-import { SignInResponse } from '../../../src/types';
+import { TRANSACTION_TYPES, SignInResponse } from '../../../src/types';
 import {
   expectUrlParameters,
   mailHogSearch,
@@ -82,13 +82,13 @@ describe('user email', () => {
     const redirectTo = message.Content.Headers['X-Redirect-To'][0];
     const link = message.Content.Headers['X-Link'][0];
 
-    const emailType = message.Content.Headers['X-Email-Template'][0];
-    expect(emailType).toBe('email-confirm-change');
+    const emailTemplate = message.Content.Headers['X-Email-Template'][0];
+    expect(emailTemplate).toBe(TRANSACTION_TYPES.emailConfirmChange);
 
     // wrong ticket should fail
     const res = await request
       .get(
-        `/verify?ticket=${uuidv4()}&type=emailConfirmChange&redirectTo=${redirectTo}`
+        `/verify?ticket=${uuidv4()}&type=emailVerify&redirectTo=${redirectTo}`
       )
       .expect(StatusCodes.MOVED_TEMPORARILY);
 
@@ -161,7 +161,6 @@ describe('user email', () => {
     const res = await request
       .get(link.replace('http://localhost:4000', ''))
       .expect(StatusCodes.MOVED_TEMPORARILY);
-
     const urlParams = getUrlParameters(res);
     expect(urlParams.get('error')).toEqual('email-already-in-use');
     expect(urlParams.get('errorDescription')).toEqual(
@@ -190,8 +189,8 @@ describe('user email', () => {
 
     const link = message.Content.Headers['X-Link'][0];
     const redirectTo = message.Content.Headers['X-Redirect-To'][0];
-    const emailType = message.Content.Headers['X-Email-Template'][0];
-    expect(emailType).toBe('email-confirm-change');
+    const emailTemplate = message.Content.Headers['X-Email-Template'][0];
+    expect(emailTemplate).toBe(TRANSACTION_TYPES.emailConfirmChange);
 
     // confirm change email
     const res = await request
@@ -218,13 +217,13 @@ describe('user email', () => {
     expect(message).toBeTruthy();
 
     const redirectTo = message.Content.Headers['X-Redirect-To'][0];
-    const emailType = message.Content.Headers['X-Email-Template'][0];
+    const emailTemplate = message.Content.Headers['X-Email-Template'][0];
     const link = message.Content.Headers['X-Link'][0];
-    expect(emailType).toBe('email-verify');
+    expect(emailTemplate).toBe(TRANSACTION_TYPES.emailVerify);
 
     const res = await request
       .get(
-        `/verify?ticket=${uuidv4()}&type=emailConfirmChange&redirectTo=${redirectTo}`
+        `/verify?ticket=${uuidv4()}&type=emailVerify&redirectTo=${redirectTo}`
       )
       .expect(StatusCodes.MOVED_TEMPORARILY);
     expectUrlParameters(res).toIncludeAllMembers(['error', 'errorDescription']);

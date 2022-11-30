@@ -2,8 +2,10 @@
 import Email from 'email-templates';
 import nodemailer from 'nodemailer';
 
+import { TransactionType, TRANSACTION_TYPES } from './types';
 import { ENV } from './utils/env';
 import { EmailLocals, renderTemplate } from './templates';
+import { createEmailRedirectionLink } from './utils';
 
 /**
  * SMTP transport.
@@ -28,3 +30,64 @@ export const emailClient = new Email<EmailLocals>({
   send: true,
   render: renderTemplate,
 });
+
+export const sendEmail = async (
+  type: TransactionType,
+  {
+    email,
+    ticket,
+    redirectTo,
+    user,
+    newEmail,
+  }: {
+    email: string;
+    ticket: string;
+    redirectTo: string;
+    user: {
+      email?: string;
+      displayName?: string | null;
+      locale?: string | null;
+    };
+    newEmail?: string;
+  }
+) => {
+  const link = createEmailRedirectionLink(type, ticket, redirectTo);
+  const template = TRANSACTION_TYPES[type];
+  await emailClient.send({
+    template,
+    message: {
+      to: newEmail || email,
+      headers: {
+        /** @deprecated */
+        'x-ticket': {
+          prepared: true,
+          value: ticket,
+        },
+        /** @deprecated */
+        'x-redirect-to': {
+          prepared: true,
+          value: redirectTo,
+        },
+        'x-email-template': {
+          prepared: true,
+          value: template,
+        },
+        'x-link': {
+          prepared: true,
+          value: link,
+        },
+      },
+    },
+    locals: {
+      link,
+      email,
+      newEmail,
+      displayName: user?.displayName || email,
+      ticket,
+      redirectTo: encodeURIComponent(redirectTo),
+      locale: user?.locale || ENV.AUTH_LOCALE_DEFAULT,
+      serverUrl: ENV.AUTH_SERVER_URL,
+      clientUrl: ENV.AUTH_CLIENT_URL,
+    },
+  });
+};

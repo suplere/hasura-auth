@@ -22,6 +22,7 @@ export const deanonymizeUser = async (
   });
 
   const updatedUser = {
+    id: userId,
     disabled: ENV.AUTH_DISABLE_NEW_USERS,
     isAnonymous: false,
     emailVerified: false,
@@ -32,15 +33,14 @@ export const deanonymizeUser = async (
     avatarUrl: getGravatarUrl(user?.email),
     ...user,
   };
+
   await gqlSdk.updateUser({
     id: userId,
     user: updatedUser,
   });
 
   // delete old refresh tokens for user
-  await gqlSdk.deleteUserRefreshTokens({
-    userId: user.id,
-  });
+  await gqlSdk.deleteUserRefreshTokens({ userId });
 
   return updatedUser;
 };

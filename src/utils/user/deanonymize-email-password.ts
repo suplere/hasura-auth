@@ -24,7 +24,7 @@ export const handleDeanonymizeUserEmailPassword = async (
   const { user } = await gqlSdk.user({
     id: userId,
   });
-  if (user?.isAnonymous) {
+  if (!user?.isAnonymous) {
     return sendError(res, 'user-not-anonymous');
   }
 
@@ -43,12 +43,12 @@ export const handleDeanonymizeUserEmailPassword = async (
     options
   );
 
-  await sendEmailIfNotVerified('verify-email', {
+  await sendEmailIfNotVerified({
     newEmail: email,
     user: updatedUser,
     displayName: updatedUser.displayName || email,
     redirectTo: options.redirectTo,
   });
 
-  res.json(ReasonPhrases.OK);
+  return res.json(ReasonPhrases.OK);
 };

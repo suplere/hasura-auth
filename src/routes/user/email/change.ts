@@ -1,17 +1,14 @@
 import { RequestHandler } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { ReasonPhrases } from 'http-status-codes';
 
 import {
   gqlSdk,
   generateTicketExpiresAt,
-  ENV,
-  createEmailRedirectionLink,
   getUserByEmail,
+  generateTicket,
 } from '@/utils';
-import { emailClient } from '@/email';
+import { sendEmail } from '@/email';
 import { Joi, email, redirectTo } from '@/validation';
-import { EMAIL_TYPES } from '@/types';
 import { sendError } from '@/errors';
 
 export const userEmailChangeSchema = Joi.object({
@@ -38,7 +35,7 @@ export const userEmailChange: RequestHandler<
 
   const { userId } = req.auth as RequestAuth;
 
-  const ticket = `${EMAIL_TYPES.CONFIRM_CHANGE}:${uuidv4()}`;
+  const ticket = generateTicket('emailConfirmChange');
   const ticketExpiresAt = generateTicketExpiresAt(60 * 60); // 1 hour
 
   // * Send an error if the new email is already used by another user
@@ -66,46 +63,12 @@ export const userEmailChange: RequestHandler<
     return sendError(res, 'forbidden-anonymous');
   }
 
-  const template = 'email-confirm-change';
-  const link = createEmailRedirectionLink(
-    EMAIL_TYPES.CONFIRM_CHANGE,
+  await sendEmail('emailConfirmChange', {
+    newEmail,
+    email: user.email,
+    redirectTo,
     ticket,
-    redirectTo
-  );
-  await emailClient.send({
-    template,
-    locals: {
-      link,
-      displayName: user.displayName,
-      email: user.email,
-      newEmail,
-      ticket,
-      redirectTo: encodeURIComponent(redirectTo),
-      locale: user.locale ?? ENV.AUTH_LOCALE_DEFAULT,
-      serverUrl: ENV.AUTH_SERVER_URL,
-      clientUrl: ENV.AUTH_CLIENT_URL,
-    },
-    message: {
-      to: newEmail,
-      headers: {
-        'x-ticket': {
-          prepared: true,
-          value: ticket,
-        },
-        'x-redirect-to': {
-          prepared: true,
-          value: redirectTo,
-        },
-        'x-email-template': {
-          prepared: true,
-          value: template,
-        },
-        'x-link': {
-          prepared: true,
-          value: link,
-        },
-      },
-    },
+    user,
   });
 
   return res.json(ReasonPhrases.OK);

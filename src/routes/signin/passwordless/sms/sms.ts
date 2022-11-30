@@ -2,7 +2,7 @@ import { RequestHandler } from 'express';
 import twilio from 'twilio';
 import { ReasonPhrases } from 'http-status-codes';
 
-import { UserRegistrationOptions } from '@/types';
+import { TemplateType, UserRegistrationOptions } from '@/types';
 import {
   gqlSdk,
   getNewOneTimePasswordData,
@@ -98,7 +98,7 @@ export const signInPasswordlessSmsHandler: RequestHandler<
           to: phoneNumber,
         });
     } else {
-      const template = 'signin-passwordless-sms';
+      const template: TemplateType = 'signin-passwordless-sms';
       const message = await renderTemplate(`${template}/text`, {
         locale: user.locale ?? ENV.AUTH_LOCALE_DEFAULT,
         displayName: user.displayName,

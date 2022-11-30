@@ -54,7 +54,6 @@ describe('passwordless email (magic link)', () => {
     expect(message).toBeTruthy();
 
     const emailTemplate = message.Content.Headers['X-Email-Template'][0];
-
     expect(emailTemplate).toBe('signin-passwordless');
 
     const link = message.Content.Headers['X-Link'][0];

@@ -17,7 +17,7 @@ function newRefreshExpiry() {
   return date;
 }
 
-const updateRefreshTokenExpiry = async (refreshToken: string) => {
+export const updateRefreshTokenExpiry = async (refreshToken: string) => {
   await gqlSdk.getUsersByRefreshTokenAndUpdateRefreshTokenExpiresAt({
     refreshToken,
     expiresAt: new Date(newRefreshExpiry()),

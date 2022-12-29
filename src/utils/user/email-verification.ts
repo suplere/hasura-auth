@@ -10,7 +10,7 @@ import { createEmailRedirectionLink } from '../redirect';
 import { getUserByEmail } from './getters';
 import { UserQuery } from '../__generated__/graphql-request';
 
-const sendEmailIfNotVerified = async ({
+export const sendEmailIfNotVerified = async ({
   email,
   newEmail,
   user,

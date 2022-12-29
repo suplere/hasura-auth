@@ -12,6 +12,7 @@ import { signOutRouter } from './signout';
 import env from './env';
 import { verifyRouter } from './verify';
 import { oauthProviders } from './oauth';
+import { graphqlRouter } from './graphql';
 
 const router = express.Router();
 router.use(nocache());
@@ -46,6 +47,7 @@ router.use(verifyRouter);
 // admin
 env(router);
 
+router.use(graphqlRouter);
 router.use(oauthProviders);
 
 // all other routes should throw 404 not found

@@ -74,6 +74,7 @@ export const redirectTo = Joi.string()
   .messages({
     redirectTo: 'The value of {{#label}} is not allowed.',
   })
+  .label('redirectTo')
   .default(ENV.AUTH_CLIENT_URL)
   .custom((value, helper) => {
     // * If no client url is set, we allow any valid url
